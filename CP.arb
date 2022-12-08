@@ -1,0 +1,638 @@
+require 'rubygems'
+require 'gosu'
+require 'matrix'
+SCREEN_HEIGHT = 947
+SCREEN_WIDTH = 993
+X_POSITION = 100
+Y_POSITION = 35
+
+
+# -----------------------------------------
+
+
+module ZOrder
+  BACKGROUND, PLANE, BOOM, GUN, WORD, BULLET, INSTRUCTION, SHOOT, = *0..7
+end
+
+
+# -----------------------------------------
+
+
+# Plane Class
+class Plane
+  attr_accessor :x, :y, :image, :vel_x, :vel_y, :angle, :changing, :count, :direction
+  def initialize(image)
+    @image = Gosu::Image.new(image);
+    @direction = rand(0.9*Math::PI .. Math::PI)
+    @angle = 0.0
+    @changing = false
+    @count = 0
+    @x = rand(1..2) * SCREEN_WIDTH
+    @y = rand(0..0.5) * SCREEN_HEIGHT
+  end
+end
+
+
+# -----------------------------------------
+
+
+# Highscore Chart Class
+class Highscore
+  attr_accessor :name, :score 
+  def initialize name, score
+    @name = name
+    @score = score
+  end
+end
+
+
+# -----------------------------------------
+
+
+# Help plane move
+def move plane, speed
+  plane.vel_x = Math.cos(plane.direction) * speed
+  plane.vel_y = Math.sin(plane.direction) * speed
+  plane.x += plane.vel_x
+  plane.x %= SCREEN_WIDTH
+  plane.y += plane.vel_y
+  plane.y %= (SCREEN_HEIGHT/2)
+end
+
+
+# -----------------------------------------
+
+
+# Draw plane     
+def draw_plane plane
+  plane.image.draw_rot(plane.x, plane.y, ZOrder::PLANE, plane.angle)
+end
+
+
+# -----------------------------------------
+
+
+# Draw shoot point
+def draw_shootpoint shoot_point
+  angle = 0.0
+  shoot_point.draw_rot(mouse_x, mouse_y, ZOrder::SHOOT, angle)
+end
+
+
+# -----------------------------------------
+
+
+# Return an angle to draw gun
+def gun_angle
+  pi = Math::PI
+  x1 = SCREEN_WIDTH/2 - mouse_x
+  y1 = SCREEN_HEIGHT - mouse_y
+  x2 = SCREEN_WIDTH/2
+  y2 = 0
+  vec1 = Vector[x1, y1]
+  vec2 = Vector[x2, y2]
+  angle = vec1.angle_with(vec2)*180/Math::PI
+  return angle
+end
+
+
+# -----------------------------------------
+
+
+# Draw gun
+def draw_gun gun
+  angle = gun_angle
+  gun.draw_rot(SCREEN_WIDTH/2, SCREEN_HEIGHT, ZOrder::GUN, angle)
+end
+
+
+# -----------------------------------------
+
+
+# Draw all kinds of menu that will exist: Menu at the beginning, Menu at the end
+def draw_menu start_choice, choose, countdown, select, end_choice, name, highscore, font
+
+  # Draw Start Menu
+  if !choose 
+    font.draw_text("DIEN BIEN PHU", X_POSITION, SCREEN_HEIGHT/2 - Y_POSITION*5, ZOrder::WORD, 2.0, 2.0, Gosu::Color.argb(0xff_ffffff))
+    font.draw_text("IN THE AIR",X_POSITION, SCREEN_HEIGHT/2 - Y_POSITION*4, ZOrder::WORD, 2.0, 2.0, Gosu::Color.argb(0xff_ffffff))
+    font.draw_text("DIFFICULTY LEVEL", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*3, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_ffffff))
+    font.draw_text("EASY", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*4, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_ffffff))
+    font.draw_text("HARD", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*5, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_ffffff))
+    font.draw_text("ENTER YOUR NAME FIRST", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*7, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    font.draw_text("PRESS [TAB] TO READ INSTRUCTION", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*8, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    font.draw_text("USE [UP] AND [DOWN] BUTTON TO CHOOSE OPTION", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*9, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    font.draw_text("USE [SPACE] BUTTON TO ENTER OPTION", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*10, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    font.draw_text("ENTER YOUR NAME: " + name, X_POSITION, SCREEN_HEIGHT/2 - Y_POSITION*7, ZOrder::WORD, 1.25, 1.25, Gosu::Color.argb(0xff_e1c514) )
+    font.draw_text("(8 LETTER ONLY)", X_POSITION, SCREEN_HEIGHT/2 - Y_POSITION*6, ZOrder::WORD, 1.0, 1.0, Gosu::Color.argb(0xff_e1c514) )
+    select.draw(X_POSITION/4 ,SCREEN_HEIGHT/2 + Y_POSITION*4 - Y_POSITION/3 + start_choice, ZOrder::GUN)
+  end
+
+  # Draw End Menu
+  if countdown <= 0
+
+    # If do not draw Highscore chart, write "Game Over"
+    if !highscore
+      font.draw_text("GAME OVER", X_POSITION, SCREEN_HEIGHT/2 - Y_POSITION*5, ZOrder::WORD, 5.0, 5.0, Gosu::Color::RED)
+    end
+
+    font.draw_text("PLAY AGAIN", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*3, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    font.draw_text("RETURN MENU", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*4, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    font.draw_text("HIGHSCORE", X_POSITION, SCREEN_HEIGHT/2 + Y_POSITION*5, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    select.draw(X_POSITION/4 , SCREEN_HEIGHT/2 + Y_POSITION*3 - Y_POSITION/3 + end_choice, ZOrder::GUN)
+  end
+end
+
+
+# -----------------------------------------
+
+
+# Draw Instruction Screen
+def draw_instruction screen
+  screen.draw(0, 0, ZOrder::INSTRUCTION)
+end
+
+
+# -----------------------------------------
+
+
+# Draw the number of bullets the player left
+def draw_bullet number_of_bullet, bullet
+  for i in 0..number_of_bullet - 1
+    number = 50*i
+    bullet.draw(X_POSITION + number, Y_POSITION*23, ZOrder::BULLET)
+  end
+end
+
+
+# -----------------------------------------
+
+
+# Draw Highscore chart
+def draw_highscore hard
+  font = Gosu::Font.new(20)
+  if hard
+    a_file = "hard.txt" # If hard is true
+    chart_distance = 0
+    word = "HARD:"
+  else 
+    a_file = "easy.txt" # If hard is false
+    chart_distance = 370
+    word = "EASY:"
+  end
+  file = File.new(a_file, "r") # Open file to read
+  count = file.gets
+  if count != nil # If nothing to read
+    count = count.chomp.to_i 
+  else
+    count = 0
+  end
+    @font.draw_text(word, SCREEN_WIDTH/2 - X_POSITION/10*27 + chart_distance, SCREEN_HEIGHT/2 - Y_POSITION*3, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+  for i in 0..count - 1
+    distance = 50*i
+    @font.draw_text(file.gets, SCREEN_WIDTH/2 - X_POSITION/10*27 + chart_distance, SCREEN_HEIGHT/2 - Y_POSITION*2 + distance, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+    @font.draw_text(file.gets, SCREEN_WIDTH/2 - X_POSITION/10*27 + chart_distance + X_POSITION/10*15, SCREEN_HEIGHT/2 - Y_POSITION*2 + distance, ZOrder::WORD, 1.5, 1.5, Gosu::Color.argb(0xff_e1c514))
+  end
+  hard = false
+  file.close
+end
+
+
+# -----------------------------------------
+
+
+class DienBienPhuInTheAir < (Gosu::Window)
+
+    # Set up variables and attributes
+    def initialize
+      super SCREEN_WIDTH, SCREEN_HEIGHT
+      self.caption = "Dien Bien Phu in the air"
+      @background_image = Gosu::Image.new("media/Background.png", :tileable => true)
+      @draw_boom = false
+      @all_plane = Array.new
+      @boom = Gosu::Image.new("media/boom.png")
+      @shoot_point = Gosu::Image.new("media/shoot_point.png")
+      @gun = Gosu::Image.new("media/gun.png")
+      @boom_time = 0
+      @font = Gosu::Font.new(20)
+      @score = 0
+      @started = false
+      @choose_level = false
+      @speed = 0
+      @set_time = 0
+      @time_to_play = 1
+      @flash = 0
+      @start_choice = 0
+      @end_choice = 0
+      @select = Gosu::Image.new("media/select.png")
+      @bullet = Gosu::Image.new("media/bullet.png")
+      @number_of_bullet = 3
+      @name = ""
+      @draw_highscore = false
+      @instruction = false
+      @instruction_screen = Gosu::Image.new("media/instruction.png")
+    end
+  
+
+# -----------------------------------------
+
+
+    def update
+
+      # When out of bullet, set @set_time to stop the game (so @time_to_play = 0)
+      if @number_of_bullet == 0
+        @set_time = Gosu.milliseconds / 1000
+      end
+
+      # When the gun shoot, a flash will appear from the gun barrel and then disappear
+      if @flash > 0
+        @flash -= 1
+        if @flash == 0
+          @gun = Gosu::Image.new("media/gun.png")
+        end
+      end
+
+      # Erase Highscore chart when the game is played again
+      if @time_to_play > 0
+        @draw_highscore = false
+      end
+
+      if @choose_level 
+        @instruction = false
+      end
+
+      # Make sure just save player score one time per game
+      if @time_to_play > 0
+        @save_highscore = false
+      end
+
+      # Save player score when the game end
+      if @time_to_play <= 0 and !@save_highscore
+        self.save_highscore
+        @save_highscore = true
+      end
+
+      @all_plane.each { |plane| move plane, @speed }
+      self.remove_plane
+      self.remove_crash_plane
+
+      # When a plane is destroyed, @boom_time will be set and countdown
+      if @boom_time > 0
+        @boom_time -=1
+      end
+
+      # Generate plane
+      if Gosu.milliseconds/100 % 2 == 0 and @all_plane.size < 6
+        @all_plane.push(generate_plane)
+      end
+
+      # Change plane direction
+      @all_plane.each do |plane|
+        if !plane.changing
+          if Gosu.milliseconds / 100 % rand(1..1000) == 1
+            plane.changing = true
+            plane.count = 10
+          end
+        else
+          if plane.count > 0
+            plane.count -= 1
+          else
+            plane.changing = false
+            plane.direction = rand(0.8*Math::PI .. 1.2*Math::PI)
+          end
+        end
+      end 
+    end
+
+
+# -----------------------------------------
+
+
+    def draw
+
+      draw_menu @start_choice, @choose_level, @time_to_play, @select, @end_choice, @name, @draw_highscore, @font
+      draw_shootpoint @shoot_point
+      draw_gun @gun
+
+      # Draw Instruction Screen
+      if @instruction 
+        draw_instruction @instruction_screen
+      end
+
+      # Draw Highscore chart
+      if @draw_highscore 
+        draw_highscore true
+        draw_highscore false
+      end
+
+      # When the game start
+      if @started
+        self.draw_status
+        if @time_to_play > 0 
+          @all_plane.each { |plane| draw_plane plane }
+          @background_image.draw(0, 0, ZOrder::BACKGROUND)
+          draw_bullet @number_of_bullet, @bullet
+        end
+      end
+    end
+  
+
+# -----------------------------------------
+
+
+    # Generate plane
+    def generate_plane
+      Plane.new("media/plane.png")
+    end
+    
+
+# -----------------------------------------
+
+
+    # Remove planes which are destroyed
+    def remove_crash_plane
+      @all_plane.reject! do |plane|
+        if plane.image == @boom and @boom_time == 0
+          @score += 1
+          true
+        else
+          false
+        end
+      end
+    end
+
+
+# -----------------------------------------
+
+
+    # When planes go out the screen, or before a new game start, or the player run out of ammo, the planes will be removed  
+    def remove_plane
+      @all_plane.reject! do |plane|
+        if plane.x < 0 || plane.y < 0 || !@started || @number_of_bullet == 0
+          true
+        else
+          false
+        end
+      end
+    end
+
+
+# -----------------------------------------
+
+
+    # When the game is running, a status including player's score, player's name, and time, is displayed
+    def draw_status
+      @time_to_play =  @set_time - (Gosu.milliseconds / 1000)
+      @font.draw_text("Score: #{@score}", X_POSITION/10, Y_POSITION, ZOrder::WORD, 1.0, 1.0, Gosu::Color::YELLOW)
+      @font.draw_text("Player: " + @name, X_POSITION/10, Y_POSITION*2, ZOrder::WORD, 1.0, 1.0, Gosu::Color::YELLOW)
+      if @time_to_play > 0
+        @font.draw_text("Time: #{@time_to_play}", X_POSITION/10, Y_POSITION*3, ZOrder::WORD, 1.0, 1.0, Gosu::Color::YELLOW)
+      else
+        @font.draw_text("Time: 0", X_POSITION/10, Y_POSITION*3, ZOrder::WORD, 1.0, 1.0, Gosu::Color::YELLOW)
+      end
+    end
+
+    
+# -----------------------------------------
+
+
+    # when the mouse move over plane
+    def mouse_over_plane(plane)
+        if ((mouse_x >= plane.x - 50 and mouse_x <= plane.x + 50 ) and (mouse_y >= plane.y - 15 and mouse_y <= plane.y + 15))
+          true
+        else
+          false
+        end
+    end
+
+    
+# -----------------------------------------
+
+
+    # Help arrange the player highscore list using Bubble Sort Algorithm
+    def BubbleSort highscore
+      size = highscore.length
+      sort = false
+      while !sort
+          sort = true
+          for i in 0..size-2
+              if highscore[i].score < highscore[i+1].score
+                  sort = false
+                  highscore[i], highscore[i+1] = highscore[i+1], highscore[i]
+              end
+          end
+      end
+      return highscore
+    end
+
+    
+# -----------------------------------------
+
+
+    # Modify the highscore list
+    def save_highscore 
+      if @hard
+        a_file = "hard.txt"
+      else 
+        a_file = "easy.txt"
+      end
+      file = File.new(a_file, "r") # Open to read
+      size = file.gets
+      if size != nil
+        size = size.chomp.to_i
+      else
+        size = 0
+      end
+
+      if size < 4
+        size += 1
+      end
+      highscore = Array.new()
+      highscore << Highscore.new(@name, @score)
+      i = 0
+      if size != 1 
+        for i in 0..size - 2
+          name = file.gets.chomp
+          score = file.gets.chomp.to_i
+          highscore << Highscore.new(name, score)
+        end
+      end
+      file.close
+  
+      file = File.new(a_file, "w") # Open to write
+      file.puts size
+      highscore = BubbleSort highscore
+
+      if size < 4
+        count = size
+      else 
+        count = 3
+      end
+      
+      for i in 0..count - 1
+        file.puts highscore[i].name
+        file.puts highscore[i].score.to_s
+      end
+      file.close
+    end
+
+    
+# -----------------------------------------
+
+
+    # Make the mouse unseen
+    def needs_cursor?; false; end
+
+    
+# -----------------------------------------
+
+
+    # When a button is pressed
+    def button_down(id)
+
+      # When the ESC button is pressed
+      if id == Gosu::KB_ESCAPE
+        close
+      end
+
+      # When the left of mouse is pressed
+      if id == Gosu::MsLeft
+        @flash = 2 # Time the flash exist from the gun barrel
+        @gun = Gosu::Image.new("media/flash.png") 
+
+        # If a plane is pressed
+        @all_plane.each { |plane| 
+            if self.mouse_over_plane plane 
+                @draw_boom = true
+                plane.image = @boom
+                @boom_time = 10
+                if @number_of_bullet == 3
+                  @number_of_bullet +=1
+                end
+                if @number_of_bullet < 3
+                  @number_of_bullet += 2
+                end
+            end
+        } 
+
+        # Reduce the number of ammo when the game is played
+        if @started
+          @number_of_bullet -= 1
+        end
+      end
+
+      # Player enter their name
+      if !@started
+        if 3 < id and id < 30
+          @name =  @name + "#{(id+61).chr}"
+        end
+
+        # The name can not reach over 8 letters
+        if @name.size >= 9
+          @name = @name.chop
+        end
+
+        # Erase a letters 
+        if id == Gosu::KB_BACKSPACE
+          @name = @name.chop
+        end
+      end
+
+      # If the player enter their name
+      if @name != "" and !@instruction
+        if id == Gosu::KB_SPACE      # When the Space button is pressed
+
+          # Play again 
+          if @end_choice == 0 and @time_to_play <= 0
+            @started = false
+            @number_of_bullet = 3
+          end
+
+          # Show highscore chart
+          if @end_choice == Y_POSITION*2 and @time_to_play <=0
+            @draw_highscore = true
+          end
+
+          # Choose difficulty
+          if !@started 
+            @started = true
+            @choose_level = true
+            if @start_choice == 0
+              @set_time = 30 + Gosu.milliseconds / 1000
+              @speed = 2
+              @score = 0
+              @easy = true
+              @hard = false
+            else
+              @set_time = 25 + Gosu.milliseconds / 1000
+              @speed = 10
+              @score = 0
+              @easy = false
+              @hard = true
+            end
+          end
+
+          # Return Menu
+          if @end_choice == Y_POSITION and @time_to_play <= 0
+            @started = false
+            @choose_level = false
+            @time_to_play = 1
+            @number_of_bullet = 3
+          end
+        end
+      end
+
+      # When the Down button is pressed
+      if id == Gosu::KB_DOWN
+
+        # Move to choose another option
+        if @time_to_play <= 0 
+          if @end_choice >=Y_POSITION
+            @end_choice = Y_POSITION*2
+          else
+            @end_choice = Y_POSITION
+          end
+        end
+
+        # Move to choose another option
+        if !@started 
+          @start_choice = Y_POSITION
+        end
+      end
+
+      # When the Up button is pressed
+      if id == Gosu::KB_UP 
+
+        # Move to choose another option
+        if @time_to_play <= 0
+          if @end_choice == Y_POSITION*2
+            @end_choice -= Y_POSITION
+          else
+            @end_choice = 0
+          end
+        end
+
+        # Move to choose another option
+        if !@started 
+          @start_choice = 0
+        end
+      end
+
+      # Show Instruction
+      if id == Gosu::KB_TAB
+
+
+        if @instruction
+          @instruction = false        # Out instruction screen
+        else
+          @instruction = true         # Show instruction
+        end
+      end
+    end
+  
+end
+
+
+
+  
+DienBienPhuInTheAir.new.show if __FILE__ == $0
