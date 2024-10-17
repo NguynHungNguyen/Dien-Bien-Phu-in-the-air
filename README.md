@@ -36,15 +36,12 @@ ruby CP.arb
 
 ## Demo Video
 
-Watch a quick demo of the game here: [CUSTOME CODE VIDEO LINK](#)
+Video of the demo of the game is included
 
 ## License
 
 This project is licensed under the MIT License.
 
-```
-
-If there are any additional details or if you'd like any edits, let me know!
 # COS10009-Custom-Code
 Introduction to Programming
 # Contact me if you need help:
