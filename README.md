@@ -1,4 +1,3 @@
-```markdown
 # Dien Bien Phu in the Air
 
 **Dien Bien Phu in the Air** is a fun and engaging game where players shoot down planes to earn points. This game includes multiple modes, a high-score system, and a challenging gameplay mechanic where the player reloads after destroying each plane.
@@ -26,7 +25,7 @@ ruby CP.arb
 
 ## System Requirements
 
-- Ruby environment (version X.X or higher recommended)
+- Ruby environment 
 - Platform: Works on any OS with Ruby installed (Windows, macOS, Linux)
 
 ## Gameplay
